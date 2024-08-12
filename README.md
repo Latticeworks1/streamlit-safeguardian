@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <div align="center">
   <img src="https://github.com/Latticeworks1/safeguardianAI/blob/c00a9b4a0ad56c2fb4b5bfb8138ff2b226a14fce/sglogo.png" alt="SafeGuardianAI Logo" width="200"/>
 
@@ -78,7 +77,7 @@ GEOLOCATOR_API_KEY=your_geolocator_api_key_here
 FIREBASE_CONFIG=your_firebase_config_json_here</code></pre>
   </li>
   <li>Run the application:
-    <pre><code>streamlit run navigation.py</code></pre>
+    <pre><code>streamlit run app.py</code></pre>
   </li>
 </ol>
 
@@ -209,4 +208,3 @@ FIREBASE_CONFIG=your_firebase_config_json_here</code></pre>
 </div>
 =======
 # SafeGuardian-LLM-private
->>>>>>> main
