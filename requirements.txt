@@ -116,6 +116,14 @@ google-api-python-client==2.146.0
     # via
     #   -r requirements.in
     #   firebase-admin
+google-generativeai
+pydub
+ctranslate2
+ffmpeg
+matplotlib
+seaborn
+stqdm
+streamlit-extras
 google-auth==2.35.0
     # via
     #   google-api-core
