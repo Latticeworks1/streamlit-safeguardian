@@ -7,8 +7,8 @@ from victim_tools.json_cleaner import upload_victim_info
 from victim_tools.audio_processing import process_audio, play_audio
 from victim_tools.function_calling import provide_user_location
 from victim_tools.state_manager import StateManager
-from rescue_tools.fetch_vital_data import set_key, update_, json_template
-
+from rescue_tools.fetch_vital_data import json_template #set_key, update_, 
+from rescue_api import RescueAPI
 import io
 import base64
 import json
@@ -28,6 +28,9 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 gemini_api = os.getenv("gemini_api")
+
+os.environ['GOOGLE_API_KEY'] = gemini_api
+
 model_path = 'models/gemini-1.5-flash'  
 response_type = 'application/json'
 config = GeminiConfig(gemini_api, model_path, response_type)
@@ -61,7 +64,10 @@ if "json_template" not in st.session_state:
 if "victim_info" not in st.session_state:
     st.session_state.victim_info = json_template
 if "victim_number" not in st.session_state:
-    st.session_state['victim_number'] = set_key(st.session_state['victim_info'])
+    #st.session_state['victim_number'] = set_key(st.session_state['victim_info'])
+    rescue = RescueAPI()
+    st.session_state['victim_number'] = rescue.post_victim(st.session_state['victim_info'])
+
 
 # Function calling definitions
 function_calling = {
@@ -97,7 +103,7 @@ def main():
     # Chat input and display
     with left:
         chat_container(height=820)
-
+        
     # Victim information display
     with right:
         display_victim_info()
@@ -130,7 +136,9 @@ def display_victim_info():
     st.write("Victim Info:\n\n", st.session_state.victim_info)
     # send data to FireBase
     try:
-        update_(st.session_state['victim_number'], st.session_state['victim_info'])
+        rescue = RescueAPI()
+        rescue.update_victim(st.session_state['victim_number'], st.session_state['victim_info'])
+        #update_(st.session_state['victim_number'], st.session_state['victim_info'])
         time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.success(f"{time}\nID: {st.session_state['victim_number']} \n Your data has been sent to the Rescue Team.")
     except Exception as e:

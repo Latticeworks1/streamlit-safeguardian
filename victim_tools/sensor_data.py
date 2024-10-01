@@ -18,9 +18,12 @@ from IPython.display import Markdown
 from typing import List, Tuple, Optional, Dict, Any
 
 from victim_tools.llm_utils import GeminiConfig
+import os
+import dotenv
 
+dotenv.load_dotenv()
 
-gemini_api = 'AIzaSyAEALAXiaE1HcD8qcN1duY4OtmUDfYqquk'
+gemini_api = os.getenv('GEMINI_API')
 model_path = 'models/gemini-1.5-flash'
 response_type = 'application/json'
 

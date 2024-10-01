@@ -1,0 +1,14 @@
+faster_whisper==0.7.1
+firebase_admin==6.5.0
+geopy==2.4.0
+google_api_python_client==2.146.0
+ipython==8.23.0
+keplergl==0.3.2
+python_dateutil==2.9.0.post0
+sodapy==2.2.0
+squarify==0.4.3
+streamlit==1.38.0
+streamlit_audiorecorder==0.0.5
+streamlit_geolocation==0.0.10
+streamlit_keplergl==0.3.0
+WMI==1.5.1

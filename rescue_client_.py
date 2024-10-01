@@ -26,10 +26,15 @@ import os
 import datetime
 import pandas as pd
 time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+cred = credentials.Certificate("rescue_tools/disasterrescueai-firebase-adminsdk.json")
+try:
+    firebase_admin.initialize_app(credential=cred,options={'databaseURL': 'https://disasterrescueai-default-rtdb.firebaseio.com'}, name='RescueTeam_RealTimeDatabase')
+except Exception as e:
+    print(f'{e} error')
+    pass
 
-from rescue_api import RescueAPI
-
-rescue_api = RescueAPI()
+ref = db.reference('rescue_team_dataset', app=firebase_admin.get_app(name='RescueTeam_RealTimeDatabase'))
+db = firebase_admin.db
 
 def responses_to_df(data,col):
     data = pd.DataFrame.from_records(data).T
@@ -42,7 +47,7 @@ def responses_to_df(data,col):
     return json_df
 
 
-
+#st.set_option('deprecation.showPyplotGlobalUse', False)
 
 from pandas.api.types import (
     is_categorical_dtype,
@@ -421,22 +426,7 @@ def color_risk(val):
         # leave blank
         color = 'white'
 
-
-with open("synthethic_data_victims.json", "r") as file:
-    synth_data = json.load(file)
-
-if st.toggle('synth_dataset'):
-    data_df = pd.DataFrame.from_records(synth_data)
-    victim_info = data_df.victim_info.to_list()
-    my_dataset = pd.json_normalize(victim_info)
-    my_dataset.set_index(data_df.index, inplace=True)
-    my_dataset = my_dataset.sample(frac=1).reset_index(drop=True)
-else:
-    rescue_api = RescueAPI()
-    my_dataset = responses_to_df(rescue_api.get_all_victims(), 'victim_info')
-    # TODO : add timestamp to the dataset (parent dictionary)
-    if st.toggle('filter empty'):
-        my_dataset = my_dataset[my_dataset['emergency_status'].notna() & (my_dataset['emergency_status'] != '')]
+my_dataset = responses_to_df(ref.get(), 'victim_data')
 
 risk_map = {
     'critical': 4,
@@ -451,7 +441,7 @@ my_dataset['risk_nb'] = my_dataset['emergency_status'].map(risk_map)
 # default to 0
 my_dataset['risk_nb'] = my_dataset['risk_nb'].fillna(0)
 # add a widget select
-#my_dataset = my_dataset[my_dataset['risk_nb'] > 0]
+
 
 
 map_1 = KeplerGl(height=800)
@@ -479,17 +469,15 @@ def color_rows(row):
     elif score == 1:
         return [f'background-color: rgba(0, 255, 0, 0.3)'] * len(row)  # Green with 30% opacity
     else:
-        return [f'background-color: rgba(0, 0, 0, 0)'] * len(row)  # White (fully opaque)
+        return [f'background-color: rgba(0, 0, 0, 1)'] * len(row)  # White (fully opaque)
 
 # Apply the styling function to the dataframe
 
-if my_dataset is not None : 
-    try:   
-        parser = filter_dataframe(my_dataset[['emergency_status', 'personal_info.name', 'location.details', 'location.street', 'location.number', 'location.floor',   'location.lat', 'location.lon', 'medical_info.injuries', 'risk_nb']])
-    except:
-        parser = filter_dataframe(my_dataset)
+if my_dataset is not None :
+    parser = filter_dataframe(my_dataset)
+    
     st.session_state['parsed_responses'] = parser
-    styled_df = parser.style.apply(color_rows, axis=1)
+    styled_df = my_dataset.style.apply(color_rows, axis=1)
     st.dataframe(styled_df)
     #st.success(f"Successfully loaded and displayed data from {my_dataset.name}")
     st.session_state['data_loaded'] = True
@@ -523,41 +511,31 @@ if my_dataset is not None :
         data=parser, name="victims_config"
         )
     
-    left__, mid__, right__  = st.columns([.3, .3, .3])
-    with left__:
-        if st.toggle('Show Optimized Paths', False):
-            rescue_centers = rescue[['longitude', 'latitude']].values.tolist()[0]
-            rescue_name = st.selectbox('Select Rescue Center', rescue['name'].values.tolist())
-            rescue_centers_coordinates = rescue[rescue['name'] == rescue_name][['longitude', 'latitude']].values.tolist()[0]
-            #fleet_capacity = st.slider('Fleet Capacity', 1, 10, 5)
-            synth_coord = synth_data[['longitude', 'latitude']]
-            #actual_coords = parser.dropna(subset=['location.lat', 'location.lon'])[['location.lon', 'location.lat']].rename(columns={'location.lon': 'longitude', 'location.lat': 'latitude'})[-1:]
-            #merged_dataset = pd.concat([synth_coord, actual_coords], axis=0)
+    if st.toggle('Show Optimized Paths'):
+        # Get the coordinates of the rescue centers
 
-            #st.dataframe(merged_dataset)
-            # Plan the unweighted route
-            unweighted_route = path_optimizer.get_osrm_trip(
-                coordinates=synth_coord.values.tolist(),
-                weights=None,
-                rescue_center=rescue_centers_coordinates
-            )
-            # Add the unweighted route to the map
-            map_1.add_data(unweighted_route, name='optimal_path')
-            base_config['config']['visState']['layers'].extend([layer for layer in itinerary_config['config']['visState']['layers']])
+        # # Plan the rescue route
+        # weighted_route = path_optimizer.get_osrm_trip(
+        #     coordinates=synth_data[['longitude', 'latitude']].values.tolist(),
+        #     weights=synth_data['risk_nb'].apply(path_optimizer.emergency_to_weight).tolist(),
+        #     rescue_center=rescue_centers[0]
+        # )
 
-    with mid__:
-        if st.toggle('Dark Mode', True):
-            base_config['config']['mapStyle'] = {
-                "styleType": "dark"
-            }
-            # change icon color to white
-            base_config['config']['visState']['layers'][0]['config']['color'] = [255, 255, 255]
-        else:
-            base_config['config']['mapStyle'] = {
-                "styleType": "light"
-            }
-            # change icon color to black
-            base_config['config']['visState']['layers'][0]['config']['color'] = [0, 0, 0]
+        # # Add the weighted route to the map
+        # map_1.add_data(weighted_route, name='weighted_route')
+
+        rescue_centers = rescue[['longitude', 'latitude']].values.tolist()[0]
+
+        # Plan the unweighted route
+        unweighted_route = path_optimizer.get_osrm_trip(
+            coordinates=synth_data[['longitude', 'latitude']].values.tolist(),
+            weights=None,
+            rescue_center=rescue_centers
+        )
+        # Add the unweighted route to the map
+        map_1.add_data(unweighted_route, name='optimal_path')
+        base_config['config']['visState']['layers'].extend([layer for layer in itinerary_config['config']['visState']['layers']])
+
 
     
     base_config['config']['visState']['layers'].extend([layer for layer in victims_config['config']['visState']['layers']])
